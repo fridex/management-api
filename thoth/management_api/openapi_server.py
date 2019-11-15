@@ -84,15 +84,15 @@ _API_GAUGE_METRIC = metrics.info("management_api_schema_up2date", "User API sche
 @application.before_request
 def before_request_callback():
     """Callback registered, runs before each request to this service."""
+    from .api_v1 import GRAPH
+
     method = request.method
     path = request.path
 
     # Update up2date metric exposed.
     if method == "GET" and path == "/metrics":
-        graph = GraphDatabase()
-        graph.connect()
         try:
-            _API_GAUGE_METRIC.set(int(graph.is_schema_up2date()))
+            _API_GAUGE_METRIC.set(int(GRAPH.is_schema_up2date()))
         except DatabaseNotInitialized as exc:
             # This can happen if database is erased after the service has been started as we
             # have passed readiness probe with this check.
@@ -131,10 +131,10 @@ def _healthiness():
 @metrics.do_not_track()
 def api_readiness():
     """Report readiness for OpenShift readiness probe."""
-    graph = GraphDatabase()
-    graph.connect()
+    from .api_v1 import GRAPH
+
     try:
-        if not graph.is_schema_up2date():
+        if not GRAPH.is_schema_up2date():
             _LOGGER.warning("Database schema is not up to date")
             return jsonify({"status": "Database schema is not up to date"}), 503, {"ContentType": "application/json"}
     except DatabaseNotInitialized as exc:
